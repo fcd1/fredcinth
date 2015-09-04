@@ -1,11 +1,11 @@
 class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
 
-  attr_accessor :internal_fields, :top_level_field_groups, :column_to_field_map
+  attr_accessor :internal_fields_builder, :top_level_dynamic_field_group_builders, :column_to_field_map
 
   def initialize
 
-    @internal_fields = Hyacinth::Utils::ImportExport::ImportExportInternalFields.new
-    @top_level_field_groups = {}
+    @internal_fields_builder = Hyacinth::Utils::InternalFieldsBuilder.new
+    @top_level_dynamic_field_group_builders = {}
     @column_to_field_map = []
 
     @hif = {}
@@ -19,7 +19,7 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
     puts 'About to inspect top level field groups ...'
     puts
 
-    @top_level_field_groups.each do |key, value|
+    @top_level_dynamic_field_group_builders.each do |key, value|
 
       puts 'Name of top level field ' + "#{key}"
       puts 'Result of inspect for associated builder '
@@ -30,12 +30,12 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
 
   end
 
-  def inspect_internal_fields
+  def inspect_internal_fields_builder
 
     puts 'About to inspect the iternal fields ...'
     puts
 
-    @internal_fields.each do |key, value|
+    @internal_fields_builder.each do |key, value|
 
       puts 'Name of internal field ' + "#{key}"
       puts 'Value of internal field: ' + "#{value}"
@@ -73,8 +73,8 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
   # 
   def csv_to_digital_object_data(csv_data_string)
     
-    puts 'Here is the string I got:'
-    puts csv_data_string
+    # puts 'Here is the string I got:'
+    # puts csv_data_string
 
     output_data_in_hif = ''
 
@@ -126,7 +126,7 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
       when header.match(/^_/)
 
         # got an internal field                                                                                                                                                   
-        @column_to_field_map[index] = @internal_fields.process_header(header)
+        @column_to_field_map[index] = @internal_fields_builder.process_header(header)
 
       else
         
@@ -139,9 +139,9 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
         return nil if rest_of_header == ''
         
         # If the top level field group builder  for this top level firld group does not exist, create one
-        @top_level_field_groups[top_level_field_group] ||= Hyacinth::Utils::DynamicFieldGroupBuilder.new top_level_field_group
+        @top_level_dynamic_field_group_builders[top_level_field_group] ||= Hyacinth::Utils::DynamicFieldGroupBuilder.new top_level_field_group
         
-        @column_to_field_map[index] = @top_level_field_groups[top_level_field_group].process_header rest_of_header
+        @column_to_field_map[index] = @top_level_dynamic_field_group_builders[top_level_field_group].process_header rest_of_header
 
       end
 
@@ -157,12 +157,12 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
     # first, clear the data from the previous row
     # First for the internal fields
     # in all of the ImportExport* instances representing the top-level dynamic fields
-    @internal_fields.clear_all_data
+    @internal_fields_builder.clear_all_data
     
     # Now clear data for top-level fields
     # puts 'top level fields:'
     # puts top_level_fields
-    @top_level_field_groups.each do |key,top_level_field|
+    @top_level_dynamic_field_group_builders.each do |key,top_level_field|
       
       # puts 'top level field:'
       # puts top_level_field
@@ -189,7 +189,7 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
     row_data_in_hif = '{'
 
     # create hif output for internal fields
-    row_data_in_hif << @internal_fields.output_data_in_hif
+    row_data_in_hif << @internal_fields_builder.output_data_in_hif
 
     row_data_in_hif << ', '
 
@@ -239,7 +239,7 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
     digital_object_data_results = '{'
 
     # create hif output for internal fields
-    digital_object_data_results << internal_fields.output_data_in_hif
+    digital_object_data_results << @internal_fields_builder.output_data_in_hif
 
     # top-level fields
     digital_object_data_results << '"dynamic_field_data\"=>{'
@@ -276,7 +276,7 @@ class Hyacinth::Utils::CsvImportExportUtilsUsingBuilders
       when header.match(/^_/)
 
         # got an internal field
-        @column_to_field_map[index] = @internal_fields.process_header(header)
+        @column_to_field_map[index] = @internal_fields_builder.process_header(header)
 
       # handles the title top-level dynamic field
       when header.match(/(^title\d*)/)

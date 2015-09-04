@@ -3,142 +3,286 @@ require 'rails_helper'
 RSpec.describe 'Hyacinth::Utils::CsvImportExportUtilsUsingBuilders' do
 
   before(:context) do
-    
+
+    @sample_header_row_as_array_one_name_one_name_role =
+      %w(name1:name_value name1:name_value_uri name1:name_role1:name_role_value name1:name_role1:name_role_type) 
+
+    @sample_header_row_as_array_one_name_two_name_roles = 
+      %w(name1:name_value name1:name_value_uri name1:name_role1:name_role_value name1:name_role1:name_role_type
+               name1:name_role2:name_role_value name1:name_role2:name_role_type )
+
+    @sample_data_row_as_array_one_name_two_name_roles = 
+      %w(MyName1Value MyName1ValueURI MyName1NameRole1Value MyName1NameRole1Type MyName1NameRole2Value MyName1NameRole2Type)
+
+    @sample_header_row_as_array =
+      %w(_pid _parent_pid _parent_pid _type _identifier_for_import _parent_identifier_for_import
+         _parent_identifier_for_import _file_path _project _publish_target _publish_target
+         title:title_non_sort_portion title:title_sort_portion
+         name1:name_value name:name_value_uri name1:name_role:name_role_value name1:name_role:name_role_type)
+
+    @csv_import_engine = Hyacinth::Utils::CsvImportExportUtilsUsingBuilders.new
+
+    @sample_header_data_rows_internal_fields_and_one_name_two_name_roles =
+<<END_OF_STRING
+PID,Project,Name1 :name_value,Name1 :name_value_uri,name1:name_role1:name_role_value,name1:name_role1:name_role_type,name1:name_role2:name_role_value,name1:name_role2:name_role_type
+_pid,_project,name1:name_value,name1:name_value_uri,name1:name_role1:name_role_value,name1:name_role1:name_role_type,name1:name_role2:name_role_value,name1:name_role2:name_role_type
+CUL:314159, MyCoolProject,MyName1Value,MyName1ValueURI,MyName1NameRole1Value,MyName1NameRole1Type,MyName1NameRole2Value,MyName1NameRole2Type
+END_OF_STRING
+
+
   end
 
   before(:example) do
     
   end
 
-  let(:sample_header_row) {
-    array = %w(_pid _parent_pid _parent_pid _type _identifier_for_import _parent_identifier_for_import
-              _parent_identifier_for_import _file_path _project _publish_target _publish_target
-              title:title_non_sort_portion title:title_sort_portion
-              name1:name_value name:name_value_uri name1:name_role:name_role_value name1:name_role:name_role_type)
-    }
-  let(:sample_header_row_one_name_one_name_role) {
-    array = %w(name1:name_value name1:name_value_uri name1:name_role1:name_role_value name1:name_role1:name_role_type) 
-    }
-  let(:sample_header_row_one_name_two_name_roles) {
-    array = %w(name1:name_value name1:name_value_uri name1:name_role1:name_role_value name1:name_role1:name_role_type
-               name1:name_role2:name_role_value name1:name_role2:name_role_type )
-    }
-  let!(:sample_header_row_one_name_two_name_roles_with_data) {
+  let!(:sample_header_data_rows_one_name_two_name_roles) {
     <<-END_OF_STRING
 Name1 :name_value,Name1 :name_value_uri,name1:name_role1:name_role_value,name1:name_role1:name_role_type,name1:name_role2:name_role_value,name1:name_role2:name_role_type
 name1:name_value,name1:name_value_uri,name1:name_role1:name_role_value,name1:name_role1:name_role_type,name1:name_role2:name_role_value,name1:name_role2:name_role_type
 MyName1Value,MyName1ValueURI,MyName1NameRole1Value,MyName1NameRole1Type,MyName1NameRole2Value,MyName1NameRole2Type
 END_OF_STRING
     }
-  let!(:sample_header_row_internal_fields_and_one_name_two_name_roles_with_data) {
-<<END_OF_STRING
-PID,Project,Name1 :name_value,Name1 :name_value_uri,name1:name_role1:name_role_value,name1:name_role1:name_role_type,name1:name_role2:name_role_value,name1:name_role2:name_role_type
-_pid,_project,name1:name_value,name1:name_value_uri,name1:name_role1:name_role_value,name1:name_role1:name_role_type,name1:name_role2:name_role_value,name1:name_role2:name_role_type
-CUL:314159, MyCoolProject,MyName1Value,MyName1ValueURI,MyName1NameRole1Value,MyName1NameRole1Type,MyName1NameRole2Value,MyName1NameRole2Type
-END_OF_STRING
-    }
-  let(:csv_import_export_using_builders_engine) { Hyacinth::Utils::CsvImportExportUtilsUsingBuilders.new }
+
   let(:digital_object_data_fixture) { JSON.parse( fixture('lib/hyacinth/utils/csv_import_export/sample_record.json').read ) }
+
   let(:csv_fixture) {fixture('lib/hyacinth/utils/csv_import_export/sample_record.csv').read }
+
   let(:simplified_sample_record_title_name_csv_fixture) {
     fixture('lib/hyacinth/utils/csv_import_export/simplified_sample_record_title_name.csv').read }
+
   let(:hif_title_multi_name_multi_role) { 
     JSON.parse( fixture('lib/hyacinth/utils/csv_import_export/sample_record_title_multi_name_multi_role.json').read )
     }
+
   let(:csv_title_multi_name_multi_role) { 
     fixture('lib/hyacinth/utils/csv_import_export/sample_record_title_multi_name_multi_role.csv').read 
     }
 
-  context "#process_header_row" do
+  describe "uses #process_header_row" do
 
-    it "builds a name dynamic field group using headers for one name containing one name_role" do
-
-      puts "builds a name dynamic field group using headers for one name containing one name_role"
-
-      csv_import_export_using_builders_engine.process_header_row sample_header_row_one_name_one_name_role
-
-      csv_import_export_using_builders_engine.inspect_top_level_fields
-
+    before(:context) do
+      @csv_import_engine.process_header_row @sample_header_row_as_array_one_name_two_name_roles
+      @name_builder = @csv_import_engine.top_level_dynamic_field_group_builders['name1']
+      @name_role_builder_1 = @name_builder.child_field_groups['name_role1']
+      @name_role_builder_2 = @name_builder.child_field_groups['name_role2']
     end
 
-    it "builds a name dynamic field group using headers for one name containing two name_roles" do
+    context "with sample header (one name with two name roles) to build a DynamicFieldGroupBuilder (DFGB) for the name and two child DFGB, one for each of the two name roles." do
 
-      puts "builds a name dynamic field group using headers for one name containing two name_roles"
+      before(:example) do
 
-      csv_import_export_using_builders_engine.process_header_row sample_header_row_one_name_two_name_roles
+      end
 
-      csv_import_export_using_builders_engine.inspect_top_level_fields
+      it "It has just one item in the top-level DFGB hash" do
+        expect(@csv_import_engine.top_level_dynamic_field_group_builders.length).to eq(1)
+      end
+
+      it "The top-level DFGB is at hash key name1" do
+        expect(@csv_import_engine.top_level_dynamic_field_group_builders).to have_key('name1')
+      end
+
+      it "The top-level DFGB is an instance of Hyacinth::Utils::DynamicFieldGroupBuilder" do
+        expect(@csv_import_engine.top_level_dynamic_field_group_builders['name1']).to be_kind_of(Hyacinth::Utils::DynamicFieldGroupBuilder)
+      end
+      
+      it "The top-level dynamic field group has two child fields" do
+        expect(@name_builder.child_fields.length).to eq(2)
+      end
+
+      it "The top-level dynamic field group has a child field called name_value" do
+        expect(@name_builder.child_fields).to have_key('name_value')
+      end
+
+      it "The top-level dynamic field group has a child field called name_value_uri" do
+        expect(@name_builder.child_fields).to have_key('name_value_uri')
+      end
+
+      it "Top level DFG  should have two child field groups" do
+        expect(@name_builder.child_field_groups.length).to eq(2)
+      end
+
+      it "Top level DFG  should have one child field group called name_role1" do
+        expect(@name_builder.child_field_groups).to have_key('name_role1')
+      end
+
+      it "Top level DFG  should have one child field group of type DynamicFieldGroupBuilder" do
+        expect(@name_builder.child_field_groups['name_role1']).to be_kind_of(Hyacinth::Utils::DynamicFieldGroupBuilder)
+      end
+
+      it "Child DFG should have two child field values" do
+        expect(@name_role_builder_1.child_fields.length).to eq(2)
+      end
+
+      it "Child DFG should have one child field called name_role_value" do
+        expect(@name_role_builder_1.child_fields).to have_key('name_role_value')
+      end
+
+      it "Child DFG should have one child field value called name_role_type" do
+        expect(@name_role_builder_1.child_fields).to have_key('name_role_type')
+      end
+
+      it "Top level DFG  should have one child field group called name_role2" do
+        expect(@name_builder.child_field_groups).to have_key('name_role2')
+      end
+
+      it "Top level DFG  should have one child field group of type DynamicFieldGroupBuilder" do
+        expect(@name_builder.child_field_groups['name_role2']).to be_kind_of(Hyacinth::Utils::DynamicFieldGroupBuilder)
+      end
+
+      it "Child DFG should have two child field values" do
+        expect(@name_role_builder_2.child_fields.length).to eq(2)
+      end
+
+      it "Child DFG should have one child field called name_role_value" do
+        expect(@name_role_builder_2.child_fields).to have_key('name_role_value')
+      end
+
+      it "Child DFG should have one child field value called name_role_type" do
+        expect(@name_role_builder_2.child_fields).to have_key('name_role_type')
+      end
 
     end
 
   end
-  
-  context "#csv_to_digital_object_data" do
 
-    xit "converts properly" do
-      
-      digital_object_data = 
-        csv_import_export_using_builders_engine.csv_to_digital_object_data(sample_header_row_one_name_two_name_roles_with_data.to_s)
-      # expect(digital_object_data).to eq(digital_object_data_fixture)
+  # Remember that before processing a data row, you need to process the headers
+  describe "uses #process_data_rows" do
 
-      puts 'here is the result of inspect after calling #csv_to_digital_object_data'
-      puts csv_import_export_using_builders_engine.top_level_field_groups["name1"].inspect
+    before(:context) do
+      @csv_import_engine.process_header_row @sample_header_row_as_array_one_name_two_name_roles
+      @csv_import_engine.process_data_row @sample_data_row_as_array_one_name_two_name_roles
+      @name_builder = @csv_import_engine.top_level_dynamic_field_group_builders['name1']
+      @name_role_builder_1 = @name_builder.child_field_groups['name_role1']
+      @name_role_builder_2 = @name_builder.child_field_groups['name_role2']
+    end
 
-      puts 'here is the digital object data'
-      puts digital_object_data
+    before(:example) do
+
 
     end
 
-    it "builds a name dynamic field group using headers for two internal fields, one name containing two name_roles" do
+    # Remove following, just here so I can see the expected values
+    # array = %w(MyName1Value,MyName1ValueURI,MyName1NameRole1Value,MyName1NameRole1Type,MyName1NameRole2Value,MyName1NameRole2Type)
 
-      digital_object_data = 
-        csv_import_export_using_builders_engine.csv_to_digital_object_data(sample_header_row_internal_fields_and_one_name_two_name_roles_with_data.to_s)
+    context "with sample header (one name with two name roles) and data information to create DFGs and pouplated these DFGs with the supplied data." do
 
-      puts 'here is the result of inspect on internal fields after calling #csv_to_digital_object_data'
-      puts csv_import_export_using_builders_engine.internal_fields.inspect
-
-      puts 'here is the result of inspect on the dynamic fields after calling #csv_to_digital_object_data'
-      puts csv_import_export_using_builders_engine.top_level_field_groups["name1"].inspect
-
-      puts 'here is the digital object data'
-      puts digital_object_data
-
-    end
-
-
-  end
-  
-  xcontext ".process_data_rows" do
-
-    it "converts properly csv with single title and multi namea and multi roles" do
-
-      puts "Here is the sample digital_object_data (fixture)"
-      puts hif_title_multi_name_multi_role
+      it "Top level name DGF has the correct value for name_value" do
+        expect(@name_builder.child_fields['name_value']).to eq('MyName1Value')
+      end
       
+      it "Top level name DGF has the correct value for name_value_uri" do
+        expect(@name_builder.child_fields['name_value_uri']).to eq('MyName1ValueURI')
+      end
       
-      digital_object_data = csv_import_export_engine.csv_to_digital_object_data(csv_title_multi_name_multi_role)
-      puts "Here is the generated digital_object_data"
-      puts digital_object_data
-      expect(digital_object_data).to eq("#{hif_title_multi_name_multi_role}")
+      it "First child DFG has the correct alue for name_role_value" do
+        expect(@name_role_builder_1.child_fields['name_role_value']).to eq('MyName1NameRole1Value')
+      end
+      
+      it "First child DFG has the correct alue for name_role_type" do
+        expect(@name_role_builder_1.child_fields['name_role_type']).to eq('MyName1NameRole1Type')
+      end
+      
+      it "Second child DFG has the correct alue for name_role_value" do
+        expect(@name_role_builder_2.child_fields['name_role_value']).to eq('MyName1NameRole2Value')
+      end
 
+      it "Second child DFG has the correct alue for name_role_type" do
+        expect(@name_role_builder_2.child_fields['name_role_type']).to eq('MyName1NameRole2Type')
+      end
+      
     end
 
   end
   
-  xcontext ".process_data_headers" do
-    it "converts properly" do
-      # puts sample_header_row.inspect
-      csv_import_export_engine.process_header_row(sample_header_row)
-      # puts csv_import_export_engine.column_to_attribute_map
-      # expect(digital_object_data).to eq(digital_object_data_fixture)
+  describe "uses #csv_to_digital_object_data" do
+
+    before(:context) do
+      @digital_object_data = 
+        @csv_import_engine.csv_to_digital_object_data(@sample_header_data_rows_internal_fields_and_one_name_two_name_roles)
+      @name_builder = @csv_import_engine.top_level_dynamic_field_group_builders['name1']
+      @name_role_builder_1 = @name_builder.child_field_groups['name_role1']
+      @name_role_builder_2 = @name_builder.child_field_groups['name_role2']
+    end
+
+    context "with sample CSV (header and data for one name contaning two name roles) to create and populate the DFGs correctly. Check structure and data of DFGs" do
+
+      it "It has just one item in the top-level DFGB hash" do
+        expect(@csv_import_engine.top_level_dynamic_field_group_builders.length).to eq(1)
+      end
+
+      it "The top-level DFGB is at hash key name1" do
+        expect(@csv_import_engine.top_level_dynamic_field_group_builders).to have_key('name1')
+      end
+
+      it "The top-level DFGB is an instance of Hyacinth::Utils::DynamicFieldGroupBuilder" do
+        expect(@csv_import_engine.top_level_dynamic_field_group_builders['name1']).to be_kind_of(Hyacinth::Utils::DynamicFieldGroupBuilder)
+      end
+      
+      it "The top-level dynamic field group has two child fields" do
+        expect(@name_builder.child_fields.length).to eq(2)
+      end
+
+      it "The top-level dynamic field group has a child field called name_value" do
+        expect(@name_builder.child_fields).to have_key('name_value')
+      end
+
+      it "The top-level dynamic field group has a child field called name_value_uri" do
+        expect(@name_builder.child_fields).to have_key('name_value_uri')
+      end
+
+      it "Top level DFG  should have two child field groups" do
+        expect(@name_builder.child_field_groups.length).to eq(2)
+      end
+
+      it "Top level DFG  should have one child field group called name_role1" do
+        expect(@name_builder.child_field_groups).to have_key('name_role1')
+      end
+
+      it "Top level DFG  should have one child field group of type DynamicFieldGroupBuilder" do
+        expect(@name_builder.child_field_groups['name_role1']).to be_kind_of(Hyacinth::Utils::DynamicFieldGroupBuilder)
+      end
+
+      it "Child DFG should have two child field values" do
+        expect(@name_role_builder_1.child_fields.length).to eq(2)
+      end
+
+      it "Child DFG should have one child field called name_role_value" do
+        expect(@name_role_builder_1.child_fields).to have_key('name_role_value')
+      end
+
+      it "Child DFG should have one child field value called name_role_type" do
+        expect(@name_role_builder_1.child_fields).to have_key('name_role_type')
+      end
+
+      it "Top level DFG  should have one child field group called name_role2" do
+        expect(@name_builder.child_field_groups).to have_key('name_role2')
+      end
+
+      it "Top level DFG  should have one child field group of type DynamicFieldGroupBuilder" do
+        expect(@name_builder.child_field_groups['name_role2']).to be_kind_of(Hyacinth::Utils::DynamicFieldGroupBuilder)
+      end
+
+      it "Child DFG should have two child field values" do
+        expect(@name_role_builder_2.child_fields.length).to eq(2)
+      end
+
+      it "Child DFG should have one child field called name_role_value" do
+        expect(@name_role_builder_2.child_fields).to have_key('name_role_value')
+      end
+
+      it "Child DFG should have one child field value called name_role_type" do
+        expect(@name_role_builder_2.child_fields).to have_key('name_role_type')
+      end
 
     end
+
   end
   
   xcontext ".csv_to_digital_object_data" do
     it "converts properly" do
       
-      digital_object_data = csv_import_export_engine.csv_to_digital_object_data(csv_fixture)
+      digital_object_data = csv_import_engine.csv_to_digital_object_data(csv_fixture)
       expect(digital_object_data).to eq(digital_object_data_fixture)
 
     end
